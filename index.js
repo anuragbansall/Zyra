@@ -1,11 +1,22 @@
 import { HumanMessage } from "@langchain/core/messages";
 import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
+import { ChatGroq } from "@langchain/groq";
 import readline from "node:readline/promises";
+import { config } from "dotenv";
 
-function callModel(state) {
-  // TODO: Call GROQ model here
+config();
 
-  return state;
+const llm = new ChatGroq({
+  model: "openai/gpt-oss-120b",
+  temperature: 0,
+  maxRetries: 2,
+});
+
+async function callModel(state) {
+  console.log("LLM is thinking...");
+  const aiResponse = await llm.invoke(state.messages);
+
+  return { messages: [aiResponse] };
 }
 
 const workflow = new StateGraph(MessagesAnnotation)
@@ -33,7 +44,10 @@ async function main() {
       messages: [new HumanMessage(userInput)],
     });
 
-    console.log("Response:", response);
+    console.log(
+      "Response:",
+      response.messages[response.messages.length - 1].content
+    );
   }
 
   rl.close();
