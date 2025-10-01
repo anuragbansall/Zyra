@@ -1,4 +1,19 @@
+import { HumanMessage } from "@langchain/core/messages";
+import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import readline from "node:readline/promises";
+
+function callModel(state) {
+  // TODO: Call GROQ model here
+
+  return state;
+}
+
+const workflow = new StateGraph(MessagesAnnotation)
+  .addNode("agent", callModel)
+  .addEdge("__start__", "agent")
+  .addEdge("agent", "__end__");
+
+const app = workflow.compile();
 
 async function main() {
   const rl = readline.createInterface({
@@ -14,7 +29,11 @@ async function main() {
       break;
     }
 
-    console.log(`You entered: ${userInput}`);
+    const response = await app.invoke({
+      messages: [new HumanMessage(userInput)],
+    });
+
+    console.log("Response:", response);
   }
 
   rl.close();

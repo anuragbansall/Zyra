@@ -9,5 +9,9 @@
   "keywords": [],
   "author": "Anurag Bansal",
   "license": "ISC",
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@langchain/core": "^0.3.78",
+    "@langchain/langgraph": "^0.4.9"
+  }
 }
