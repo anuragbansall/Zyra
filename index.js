@@ -3,14 +3,24 @@ import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { ChatGroq } from "@langchain/groq";
 import readline from "node:readline/promises";
 import { config } from "dotenv";
+import { ToolNode } from "@langchain/langgraph/prebuilt";
+import { TavilySearch } from "@langchain/tavily";
 
 config();
+
+const tool = new TavilySearch({
+  maxResults: 5,
+  topic: "general",
+});
+
+const tools = [tool];
+const toolNode = new ToolNode(tools);
 
 const llm = new ChatGroq({
   model: "openai/gpt-oss-120b",
   temperature: 0,
   maxRetries: 2,
-});
+}).bindTools(tools);
 
 async function callModel(state) {
   console.log("LLM is thinking...");
@@ -19,10 +29,18 @@ async function callModel(state) {
   return { messages: [aiResponse] };
 }
 
+function shouldContinue(state) {
+  return state.messages[state.messages.length - 1].tool_calls?.length > 0
+    ? "tools"
+    : "__end__";
+}
+
 const workflow = new StateGraph(MessagesAnnotation)
   .addNode("agent", callModel)
+  .addNode("tools", toolNode)
   .addEdge("__start__", "agent")
-  .addEdge("agent", "__end__");
+  .addEdge("tools", "agent")
+  .addConditionalEdges("agent", shouldContinue);
 
 const app = workflow.compile();
 
