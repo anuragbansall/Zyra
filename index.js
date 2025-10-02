@@ -1,12 +1,19 @@
 import { HumanMessage } from "@langchain/core/messages";
-import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
+import {
+  MessagesAnnotation,
+  StateGraph,
+  MemorySaver,
+} from "@langchain/langgraph";
 import { ChatGroq } from "@langchain/groq";
 import readline from "node:readline/promises";
 import { config } from "dotenv";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { TavilySearch } from "@langchain/tavily";
+import { threadId } from "node:worker_threads";
 
 config();
+
+const checkpointer = new MemorySaver();
 
 const tool = new TavilySearch({
   maxResults: 5,
@@ -42,7 +49,7 @@ const workflow = new StateGraph(MessagesAnnotation)
   .addEdge("tools", "agent")
   .addConditionalEdges("agent", shouldContinue);
 
-const app = workflow.compile();
+const app = workflow.compile({ checkpointer });
 
 async function main() {
   const rl = readline.createInterface({
@@ -58,9 +65,14 @@ async function main() {
       break;
     }
 
-    const response = await app.invoke({
-      messages: [new HumanMessage(userInput)],
-    });
+    const response = await app.invoke(
+      {
+        messages: [new HumanMessage(userInput)],
+      },
+      {
+        configurable: { thread_id: threadId },
+      }
+    );
 
     console.log(
       "Response:",
